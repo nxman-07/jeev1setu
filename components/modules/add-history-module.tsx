@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { apiClient } from "@/lib/api-client"
 
 interface AddHistoryModuleProps {
   user: any
@@ -16,6 +17,9 @@ interface AddHistoryModuleProps {
 
 export function AddHistoryModule({ user, onRecordAdd }: AddHistoryModuleProps) {
   const [activeTab, setActiveTab] = useState<"consultation" | "lab" | "prescription">("consultation")
+  const [isSaving, setIsSaving] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [submitError, setSubmitError] = useState("")
   const [formData, setFormData] = useState({
     healthId: "",
     treatmentType: "consultation",
@@ -32,43 +36,64 @@ export function AddHistoryModule({ user, onRecordAdd }: AddHistoryModuleProps) {
     followUp: "",
   })
 
-  const [submitted, setSubmitted] = useState(false)
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = () => {
-    if (formData.healthId && formData.diagnosis && formData.hospitalName && formData.doctorName) {
-      if (onRecordAdd) {
-        onRecordAdd({
-          ...formData,
-          treatment: activeTab === "consultation" ? "Consultation" : activeTab === "lab" ? "Lab Test" : "Prescription",
-          status: "completed",
-          id: `R${Date.now()}`,
-        })
+  const handleSubmit = async () => {
+    if (!formData.healthId || !formData.diagnosis || !formData.hospitalName || !formData.doctorName) {
+      setSubmitError("Please fill in all required fields")
+      return
+    }
+
+    setIsSaving(true)
+    setSubmitError("")
+    console.log("[v0] Saving record to cloud for user:", user.email)
+
+    try {
+      const recordData = {
+        ...formData,
+        treatment: activeTab === "consultation" ? "Consultation" : activeTab === "lab" ? "Lab Test" : "Prescription",
+        status: "completed",
+        id: `R${Date.now()}`,
       }
 
-      setSubmitted(true)
-      setTimeout(() => {
-        setSubmitted(false)
-        setFormData({
-          healthId: "",
-          treatmentType: "consultation",
-          diagnosis: "",
-          prescription: "",
-          notes: "",
-          hospitalName: "",
-          doctorName: "",
-          doctorPhone: "",
-          date: new Date().toISOString().split("T")[0],
-          symptoms: "",
-          vitals: "",
-          labTests: "",
-          followUp: "",
-        })
-      }, 3000)
+      const result = await apiClient.addRecord(user.email, recordData)
+      console.log("[v0] Record save response:", result)
+
+      if (result.success) {
+        setSubmitted(true)
+        if (onRecordAdd) {
+          onRecordAdd(recordData)
+        }
+
+        setTimeout(() => {
+          setSubmitted(false)
+          setFormData({
+            healthId: "",
+            treatmentType: "consultation",
+            diagnosis: "",
+            prescription: "",
+            notes: "",
+            hospitalName: "",
+            doctorName: "",
+            doctorPhone: "",
+            date: new Date().toISOString().split("T")[0],
+            symptoms: "",
+            vitals: "",
+            labTests: "",
+            followUp: "",
+          })
+        }, 3000)
+      } else {
+        setSubmitError(result.message || "Failed to save record")
+      }
+    } catch (err) {
+      console.error("[v0] Error saving record:", err)
+      setSubmitError("Failed to sync to cloud. Please try again.")
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -88,6 +113,7 @@ export function AddHistoryModule({ user, onRecordAdd }: AddHistoryModuleProps) {
       labTests: "",
       followUp: "",
     })
+    setSubmitError("")
   }
 
   return (
@@ -402,28 +428,41 @@ export function AddHistoryModule({ user, onRecordAdd }: AddHistoryModuleProps) {
           </Tabs>
 
           {/* Submission */}
-          <div className="mt-6 flex gap-3">
-            <Button
-              onClick={handleSubmit}
-              disabled={!formData.healthId || !formData.diagnosis || !formData.hospitalName || !formData.doctorName}
-              className="btn-gradient btn-rounded text-white flex-1 font-semibold"
-            >
-              Save & Sync to Cloud
-            </Button>
-            <Button variant="outline" className="rounded-full border-border bg-transparent" onClick={handleClear}>
-              Clear Form
-            </Button>
+          <div className="mt-6 space-y-3">
+            {submitError && (
+              <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                {submitError}
+              </div>
+            )}
+            <div className="flex gap-3">
+              <Button
+                onClick={handleSubmit}
+                disabled={
+                  isSaving ||
+                  !formData.healthId ||
+                  !formData.diagnosis ||
+                  !formData.hospitalName ||
+                  !formData.doctorName
+                }
+                className="btn-gradient btn-rounded text-white flex-1 font-semibold"
+              >
+                {isSaving ? "Syncing to Cloud..." : "Save & Sync to Cloud"}
+              </Button>
+              <Button variant="outline" className="rounded-full border-border bg-transparent" onClick={handleClear}>
+                Clear Form
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Success Message */}
       {submitted && (
-        <Card className="bg-accent/20 border-accent">
+        <Card className="bg-green-500/20 border-green-500/50">
           <CardContent className="py-4 flex items-center gap-3">
             <span className="text-2xl">✓</span>
             <div>
-              <p className="font-semibold text-accent-foreground">Record Saved Successfully</p>
+              <p className="font-semibold text-green-400">Record Saved Successfully</p>
               <p className="text-sm text-muted-foreground">Changes synced to cloud database with version control</p>
             </div>
           </CardContent>

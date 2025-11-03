@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { apiClient } from "@/lib/api-client"
 
 interface DoctorDashboardProps {
   user: any
@@ -14,24 +15,39 @@ interface DoctorDashboardProps {
 export function DoctorDashboard({ user, onLogout }: DoctorDashboardProps) {
   const [activeTab, setActiveTab] = useState<"patients" | "schedule" | "records">("patients")
   const [searchHealthId, setSearchHealthId] = useState("")
+  const [searchedPatient, setSearchedPatient] = useState<any>(null)
+  const [searchError, setSearchError] = useState("")
+  const [isSearching, setIsSearching] = useState(false)
 
-  const mockPatients = [
-    {
-      healthId: "JEEV12345ABC",
-      name: "Rajesh Kumar",
-      condition: "Hypertension",
-      status: "stable",
-      nextVisit: "2024-11-10",
-    },
-    {
-      healthId: "JEEVXYZ789DEF",
-      name: "Priya Patel",
-      condition: "Diabetes",
-      status: "monitoring",
-      nextVisit: "2024-11-15",
-    },
-    { healthId: "JEEV456DEF789", name: "Amit Kumar", condition: "Asthma", status: "stable", nextVisit: "2024-11-20" },
-  ]
+  const handleSearchPatient = async () => {
+    if (!searchHealthId.trim()) {
+      setSearchError("Please enter a Health ID")
+      return
+    }
+
+    setIsSearching(true)
+    setSearchError("")
+    console.log("[v0] Doctor searching for patient:", searchHealthId)
+
+    try {
+      const result = await apiClient.searchPatient(searchHealthId)
+      console.log("[v0] Search response:", result)
+
+      if (result.success && result.patient) {
+        setSearchedPatient(result.patient)
+        setSearchError("")
+      } else {
+        setSearchedPatient(null)
+        setSearchError(result.message || "Patient not found")
+      }
+    } catch (err) {
+      console.error("[v0] Search error:", err)
+      setSearchError("Failed to search patient. Please try again.")
+      setSearchedPatient(null)
+    } finally {
+      setIsSearching(false)
+    }
+  }
 
   const mockSchedule = [
     { time: "09:00 AM", patient: "Rajesh Kumar", type: "Consultation", room: "A-101" },
@@ -60,7 +76,7 @@ export function DoctorDashboard({ user, onLogout }: DoctorDashboardProps) {
             onClick={() => setActiveTab(tab as any)}
             className={`flex-1 py-2 px-4 rounded-full font-medium transition-all text-sm ${
               activeTab === tab
-                ? "bg-gradient-to-r from-blue-500 to-green-500 text-primary-foreground"
+                ? "bg-gradient-to-r from-white to-red-500 text-black"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -117,58 +133,95 @@ export function DoctorDashboard({ user, onLogout }: DoctorDashboardProps) {
         <div className="space-y-6">
           <Card className="bg-card/50 border-border">
             <CardHeader>
-              <CardTitle>Search Patients</CardTitle>
+              <CardTitle>Search Patients by Health ID</CardTitle>
+              <CardDescription>
+                Enter patient's unique Health ID to access their complete medical history
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Input
-                placeholder="Enter Health ID (e.g., JEEV12345ABC)"
-                value={searchHealthId}
-                onChange={(e) => setSearchHealthId(e.target.value.toUpperCase())}
-                className="bg-input border-border"
-              />
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter Health ID (e.g., JEEVXYZ123ABC)"
+                  value={searchHealthId}
+                  onChange={(e) => setSearchHealthId(e.target.value.toUpperCase())}
+                  onKeyPress={(e) => e.key === "Enter" && handleSearchPatient()}
+                  className="bg-input border-border flex-1"
+                />
+                <Button
+                  onClick={handleSearchPatient}
+                  disabled={isSearching || !searchHealthId.trim()}
+                  className="btn-gradient btn-rounded text-white px-6 font-semibold"
+                >
+                  {isSearching ? "Searching..." : "Search"}
+                </Button>
+              </div>
+
+              {searchError && (
+                <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                  {searchError}
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          <div className="grid gap-4">
-            {mockPatients.map((patient) => (
-              <Card key={patient.healthId} className="bg-card/50 border-border">
-                <CardContent className="pt-6">
+          {searchedPatient && (
+            <div className="space-y-4">
+              <Card className="bg-card/50 border-border">
+                <CardHeader>
                   <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h4 className="font-semibold text-lg">{patient.name}</h4>
-                        <Badge variant={patient.status === "stable" ? "default" : "secondary"} className="rounded-full">
-                          {patient.status}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Health ID</p>
-                          <p className="font-medium font-mono">{patient.healthId}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Condition</p>
-                          <p className="font-medium">{patient.condition}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Next Visit</p>
-                          <p className="font-medium">{patient.nextVisit}</p>
-                        </div>
-                      </div>
+                    <div>
+                      <CardTitle className="text-2xl">{searchedPatient.fullName || "Patient"}</CardTitle>
+                      <CardDescription>Health ID: {searchedPatient.healthId}</CardDescription>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="rounded-full border-border bg-transparent">
-                        View Record
-                      </Button>
-                      <Button variant="outline" size="sm" className="rounded-full border-border bg-transparent">
-                        Update
-                      </Button>
+                    <Badge className="bg-green-500/20 text-green-400 border-green-500/50 rounded-full">Active</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="p-3 bg-secondary/30 rounded-lg border border-border">
+                      <p className="text-xs text-muted-foreground">Email</p>
+                      <p className="font-mono text-sm">{searchedPatient.email}</p>
                     </div>
+                    <div className="p-3 bg-secondary/30 rounded-lg border border-border">
+                      <p className="text-xs text-muted-foreground">Patient Type</p>
+                      <p className="font-medium text-sm capitalize">{searchedPatient.type}</p>
+                    </div>
+                    <div className="p-3 bg-secondary/30 rounded-lg border border-border">
+                      <p className="text-xs text-muted-foreground">Member Since</p>
+                      <p className="text-sm">{new Date(searchedPatient.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div className="p-3 bg-secondary/30 rounded-lg border border-border">
+                      <p className="text-xs text-muted-foreground">Total Records</p>
+                      <p className="text-2xl font-bold">{searchedPatient.medicalRecords?.length || 0}</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-border">
+                    <h4 className="font-semibold mb-3">Medical Records</h4>
+                    {searchedPatient.medicalRecords && searchedPatient.medicalRecords.length > 0 ? (
+                      <div className="space-y-2">
+                        {searchedPatient.medicalRecords.map((record: any, idx: number) => (
+                          <div key={idx} className="p-3 bg-secondary/20 rounded-lg border border-border text-sm">
+                            <p className="font-medium">{record.diagnosis}</p>
+                            <p className="text-xs text-muted-foreground">{record.date}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No medical records found</p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 pt-4">
+                    <Button className="btn-gradient btn-rounded text-white flex-1 font-semibold">Add New Record</Button>
+                    <Button variant="outline" className="rounded-full border-border bg-transparent">
+                      View History
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
