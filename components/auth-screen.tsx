@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 interface AuthScreenProps {
   onAuthSuccess: (user: any) => void
@@ -14,6 +15,9 @@ interface AuthScreenProps {
 export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
   const [showAuth, setShowAuth] = useState(false)
   const [activeTab, setActiveTab] = useState<"patient" | "hospital">("hospital")
+  const [isLogin, setIsLogin] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -25,36 +29,111 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    setError("")
   }
 
-  const handleHospitalLogin = () => {
-    const user = {
-      id: `hosp_${Date.now()}`,
-      email: formData.email,
-      type: "hospital",
-      role: formData.role,
-      hospitalName: formData.hospitalName,
+  const handleHospitalLogin = async () => {
+    if (!formData.email || !formData.password) {
+      setError("Email and password required")
+      return
     }
-    onAuthSuccess(user)
+
+    setLoading(true)
+    try {
+      if (isLogin) {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+          }),
+        })
+        const data = await response.json()
+        if (data.success) {
+          onAuthSuccess(data.user)
+        } else {
+          setError(data.message || "Login failed")
+        }
+      } else {
+        const response = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+            type: "hospital",
+            hospitalName: formData.hospitalName,
+            role: formData.role,
+          }),
+        })
+        const data = await response.json()
+        if (data.success) {
+          onAuthSuccess(data.user)
+        } else {
+          setError(data.message || "Signup failed")
+        }
+      }
+    } catch (err) {
+      setError("Authentication failed")
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handlePatientRegister = () => {
-    const healthId = `JEEV${Math.random().toString(36).substr(2, 9).toUpperCase()}`
-    const user = {
-      id: healthId,
-      email: formData.email,
-      type: "patient",
-      fullName: formData.fullName,
-      healthId: healthId,
+  const handlePatientRegister = async () => {
+    if (!formData.email || !formData.password || !formData.fullName) {
+      setError("All fields required")
+      return
     }
-    onAuthSuccess(user)
+
+    setLoading(true)
+    try {
+      if (isLogin) {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+          }),
+        })
+        const data = await response.json()
+        if (data.success) {
+          onAuthSuccess(data.user)
+        } else {
+          setError(data.message || "Login failed")
+        }
+      } else {
+        const response = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+            fullName: formData.fullName,
+            type: "patient",
+          }),
+        })
+        const data = await response.json()
+        if (data.success) {
+          onAuthSuccess(data.user)
+        } else {
+          setError(data.message || "Signup failed")
+        }
+      }
+    } catch (err) {
+      setError("Authentication failed")
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (!showAuth) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-foreground">
+      <div className="min-h-screen bg-gradient-to-br from-background via-secondary/10 to-background text-foreground">
         {/* Navigation */}
-        <nav className="fixed top-0 w-full z-50 border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-sm">
+        <nav className="fixed top-0 w-full z-50 border-b border-border/50 bg-background/80 backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
               <img
@@ -63,12 +142,12 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                 className="h-12 w-auto rounded-xl"
               />
             </div>
-            <Button
-              onClick={() => setShowAuth(true)}
-              className="bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-600 hover:to-emerald-600 text-white font-semibold rounded-full px-6"
-            >
-              Get Started
-            </Button>
+            <div className="flex items-center gap-4">
+              <ThemeToggle />
+              <Button onClick={() => setShowAuth(true)} className="btn-gradient btn-rounded text-white font-semibold">
+                Get Started
+              </Button>
+            </div>
           </div>
         </nav>
 
@@ -78,11 +157,11 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
             <div className="space-y-4">
               <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-balance leading-tight">
                 India's First Unified
-                <span className="block bg-gradient-to-r from-blue-400 via-emerald-400 to-blue-400 bg-clip-text text-transparent">
+                <span className="block bg-gradient-to-r from-red-500 via-red-400 to-red-600 bg-clip-text text-transparent">
                   Health Management ERP
                 </span>
               </h1>
-              <p className="text-xl text-slate-400 text-balance max-w-3xl mx-auto leading-relaxed">
+              <p className="text-xl text-muted-foreground text-balance max-w-3xl mx-auto leading-relaxed">
                 One universal Health ID. One connected platform. Complete medical history across all hospitals and
                 healthcare providers in India.
               </p>
@@ -93,7 +172,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   setActiveTab("patient")
                   setShowAuth(true)
                 }}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-full px-8 h-12 text-base"
+                className="btn-gradient-secondary btn-rounded text-white font-semibold"
               >
                 Register as Patient
               </Button>
@@ -102,7 +181,8 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   setActiveTab("hospital")
                   setShowAuth(true)
                 }}
-                className="border border-slate-700 bg-transparent hover:bg-slate-800/50 text-foreground font-semibold rounded-full px-8 h-12 text-base"
+                variant="outline"
+                className="border-border bg-transparent hover:bg-secondary/50 font-semibold rounded-full px-8 h-12 text-base"
               >
                 Hospital Login
               </Button>
@@ -111,14 +191,13 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
         </section>
 
         {/* Features Grid */}
-        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-900 to-slate-950">
+        <section className="py-20 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <h2 className="text-4xl font-bold text-center mb-16 text-balance">What Makes JEEV-1-SETU Different</h2>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Feature 1 */}
-              <div className="group rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all hover:shadow-lg hover:shadow-blue-500/10">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="group rounded-2xl bg-card border border-border p-6 hover:border-red-500/50 transition-all hover:shadow-lg hover:shadow-red-500/10">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
@@ -129,14 +208,13 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   </svg>
                 </div>
                 <h3 className="font-bold text-lg mb-2">Universal Health ID</h3>
-                <p className="text-slate-400 text-sm">
+                <p className="text-muted-foreground text-sm">
                   One unique ID accessible across all partnered hospitals nationwide
                 </p>
               </div>
 
-              {/* Feature 2 */}
-              <div className="group rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700/50 hover:border-emerald-500/50 transition-all hover:shadow-lg hover:shadow-emerald-500/10">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="group rounded-2xl bg-card border border-border p-6 hover:border-red-500/50 transition-all hover:shadow-lg hover:shadow-red-500/10">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
@@ -147,12 +225,13 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   </svg>
                 </div>
                 <h3 className="font-bold text-lg mb-2">FHIR Compliant</h3>
-                <p className="text-slate-400 text-sm">Interoperable with all healthcare systems using FHIR standards</p>
+                <p className="text-muted-foreground text-sm">
+                  Interoperable with all healthcare systems using FHIR standards
+                </p>
               </div>
 
-              {/* Feature 3 */}
-              <div className="group rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all hover:shadow-lg hover:shadow-purple-500/10">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="group rounded-2xl bg-card border border-border p-6 hover:border-red-500/50 transition-all hover:shadow-lg hover:shadow-red-500/10">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
@@ -163,12 +242,11 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   </svg>
                 </div>
                 <h3 className="font-bold text-lg mb-2">Enterprise Security</h3>
-                <p className="text-slate-400 text-sm">HTTPS encrypted, role-based access control, audit logs</p>
+                <p className="text-muted-foreground text-sm">HTTPS encrypted, role-based access control, audit logs</p>
               </div>
 
-              {/* Feature 4 */}
-              <div className="group rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700/50 hover:border-pink-500/50 transition-all hover:shadow-lg hover:shadow-pink-500/10">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="group rounded-2xl bg-card border border-border p-6 hover:border-red-500/50 transition-all hover:shadow-lg hover:shadow-red-500/10">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
@@ -179,145 +257,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   </svg>
                 </div>
                 <h3 className="font-bold text-lg mb-2">Real-time Sync</h3>
-                <p className="text-slate-400 text-sm">Cloud-based, version-controlled, auto-synced records</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Complete Medical History Section */}
-        <section className="py-20 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div className="space-y-6">
-                <h2 className="text-4xl font-bold text-balance">Complete Medical History at Your Fingertips</h2>
-                <p className="text-slate-400 text-lg">
-                  Access your entire medical journey across all healthcare providers:
-                </p>
-                <ul className="space-y-4">
-                  <li className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 flex items-center justify-center flex-shrink-0 mt-1">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">All Previous Treatments</h4>
-                      <p className="text-slate-400 text-sm">Complete diagnosis history from every hospital visit</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 flex items-center justify-center flex-shrink-0 mt-1">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">Doctor Information</h4>
-                      <p className="text-slate-400 text-sm">Direct contact of all doctors who examined you</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 flex items-center justify-center flex-shrink-0 mt-1">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">Allergies & Conditions</h4>
-                      <p className="text-slate-400 text-sm">Medical allergies and conditions tracked in one place</p>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-              <div className="rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-8 border border-slate-700/50 space-y-6">
-                <div className="space-y-3 bg-slate-900/50 rounded-xl p-4 border border-slate-700/30">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400 font-medium">Health ID</span>
-                    <span className="text-blue-400 font-bold">JEEV-ABC12345</span>
-                  </div>
-                </div>
-                <div className="space-y-3 bg-slate-900/50 rounded-xl p-4 border border-slate-700/30">
-                  <h4 className="text-sm font-semibold text-slate-300">Recent Visits</h4>
-                  <div className="space-y-2">
-                    <p className="text-sm text-slate-400">Apollo Hospitals - Cardiology</p>
-                    <p className="text-xs text-slate-500">Dr. Rajesh Kumar | Jan 15, 2025</p>
-                  </div>
-                </div>
-                <div className="space-y-3 bg-slate-900/50 rounded-xl p-4 border border-slate-700/30">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-slate-300">Active Conditions</span>
-                    <span className="bg-emerald-500/20 text-emerald-400 text-xs font-semibold px-2 py-1 rounded-full">
-                      3
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400">Hypertension, Diabetes, Asthma</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* For Hospitals Section */}
-        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-950 to-slate-900">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div className="rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 p-8 border border-slate-700/50 space-y-6">
-                <div className="space-y-2 bg-slate-900/50 rounded-xl p-4 border border-slate-700/30">
-                  <p className="text-xs font-semibold text-slate-400 uppercase">Dashboard</p>
-                  <p className="text-sm text-slate-300">Total Patients: 15,240</p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/30 text-center">
-                    <p className="text-2xl font-bold text-blue-400">3,421</p>
-                    <p className="text-xs text-slate-400 mt-1">Active Cases</p>
-                  </div>
-                  <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/30 text-center">
-                    <p className="text-2xl font-bold text-emerald-400">428</p>
-                    <p className="text-xs text-slate-400 mt-1">Today Visits</p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-6">
-                <h2 className="text-4xl font-bold text-balance">
-                  Empower Your Hospital with Complete Patient Insights
-                </h2>
-                <p className="text-slate-400 text-lg">For Hospital Administrators & Doctors:</p>
-                <ul className="space-y-4">
-                  <li className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 flex items-center justify-center flex-shrink-0 mt-1">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">Search by Universal Health ID</h4>
-                      <p className="text-slate-400 text-sm">Access any patient's complete history instantly</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 flex items-center justify-center flex-shrink-0 mt-1">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">Real-time Analytics</h4>
-                      <p className="text-slate-400 text-sm">Hospital performance metrics and patient insights</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 flex items-center justify-center flex-shrink-0 mt-1">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">Secure Interoperability</h4>
-                      <p className="text-slate-400 text-sm">FHIR-compliant integration with all hospital systems</p>
-                    </div>
-                  </li>
-                </ul>
+                <p className="text-muted-foreground text-sm">Cloud-based, version-controlled, auto-synced records</p>
               </div>
             </div>
           </div>
@@ -328,7 +268,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <div className="space-y-4">
               <h2 className="text-4xl sm:text-5xl font-bold text-balance">Join the Healthcare Revolution</h2>
-              <p className="text-xl text-slate-400 text-balance">
+              <p className="text-xl text-muted-foreground text-balance">
                 Be part of India's first unified health management platform
               </p>
             </div>
@@ -338,7 +278,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   setActiveTab("patient")
                   setShowAuth(true)
                 }}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-full px-8 h-12 text-base"
+                className="btn-gradient-secondary btn-rounded text-white font-semibold"
               >
                 Register as Patient
               </Button>
@@ -347,7 +287,8 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   setActiveTab("hospital")
                   setShowAuth(true)
                 }}
-                className="border border-slate-700 bg-transparent hover:bg-slate-800/50 text-foreground font-semibold rounded-full px-8 h-12 text-base"
+                variant="outline"
+                className="border-border bg-transparent hover:bg-secondary/50 font-semibold rounded-full px-8 h-12 text-base"
               >
                 Hospital Login
               </Button>
@@ -356,8 +297,8 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
         </section>
 
         {/* Footer */}
-        <footer className="border-t border-slate-800/50 py-8 px-4 sm:px-6 lg:px-8 bg-gradient-to-t from-slate-950 to-transparent">
-          <div className="max-w-7xl mx-auto text-center text-slate-500 text-sm space-y-2">
+        <footer className="border-t border-border/50 py-8 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto text-center text-muted-foreground text-sm space-y-2">
             <p>Secured with HTTPS Encryption | FHIR Compliant | Role-Based Access Control</p>
             <p>Cloud-based Infrastructure | Version Controlled | Enterprise-Grade Security</p>
           </div>
@@ -367,19 +308,22 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/10 to-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="max-w-md w-full space-y-8">
-        {/* Logo / Header - Updated to use curved rectangular logo */}
-        <div className="text-center space-y-2">
-          <div className="flex justify-center mb-4">
-            <img
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/jeevonesetu-dwgxE4lM53FRMKkjDrcpasrbG8feoE.jpg"
-              alt="JEEV-1-SETU Logo"
-              className="h-16 rounded-2xl"
-            />
+        {/* Header with Theme Toggle */}
+        <div className="flex justify-between items-start mb-4">
+          <div className="text-center flex-1">
+            <div className="flex justify-center mb-4">
+              <img
+                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/jeevonesetu-dwgxE4lM53FRMKkjDrcpasrbG8feoE.jpg"
+                alt="JEEV-1-SETU Logo"
+                className="h-16 rounded-2xl"
+              />
+            </div>
+            <h1 className="text-3xl font-bold text-balance">JEEV-1-SETU</h1>
+            <p className="text-muted-foreground text-sm">Universal Health Management Platform</p>
           </div>
-          <h1 className="text-3xl font-bold text-balance">JEEV-1-SETU</h1>
-          <p className="text-muted-foreground text-sm">Universal Health Management Platform</p>
+          <ThemeToggle />
         </div>
 
         {/* Tab Selection */}
@@ -387,39 +331,100 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
           <button
             onClick={() => setActiveTab("hospital")}
             className={`flex-1 py-2 px-4 rounded-full font-medium transition-all text-sm ${
-              activeTab === "hospital"
-                ? "bg-gradient-to-r from-blue-500 to-green-500 text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground"
+              activeTab === "hospital" ? "btn-gradient text-white" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Hospital Login
+            Hospital
           </button>
           <button
             onClick={() => setActiveTab("patient")}
             className={`flex-1 py-2 px-4 rounded-full font-medium transition-all text-sm ${
               activeTab === "patient"
-                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-primary-foreground"
+                ? "btn-gradient-secondary text-white"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Patient Register
+            Patient
+          </button>
+        </div>
+
+        {/* Login/Register Toggle */}
+        <div className="flex gap-2 bg-secondary/40 p-1 rounded-full">
+          <button
+            onClick={() => {
+              setIsLogin(true)
+              setError("")
+            }}
+            className={`flex-1 py-2 px-4 rounded-full font-medium transition-all text-sm ${
+              isLogin ? "btn-gradient text-white" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Login
+          </button>
+          <button
+            onClick={() => {
+              setIsLogin(false)
+              setError("")
+            }}
+            className={`flex-1 py-2 px-4 rounded-full font-medium transition-all text-sm ${
+              !isLogin ? "btn-gradient-secondary text-white" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Register
           </button>
         </div>
 
         {/* Auth Forms */}
-        <Card className="bg-card/50 border-border">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle>{activeTab === "hospital" ? "Hospital Portal" : "Patient Registration"}</CardTitle>
+            <CardTitle>{isLogin ? "Login" : "Register"}</CardTitle>
             <CardDescription>
               {activeTab === "hospital"
-                ? "Access patient records and manage medical history"
-                : "Register once, get your universal Health ID"}
+                ? isLogin
+                  ? "Access patient records and manage medical history"
+                  : "Register your hospital account"
+                : isLogin
+                  ? "Login to your health portal"
+                  : "Register once, get your universal Health ID"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {activeTab === "hospital" ? (
+            {error && (
+              <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
+
+            {/* Common Fields */}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="user@example.com"
+                value={formData.email}
+                onChange={handleInputChange}
+                className="bg-input border-border"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={handleInputChange}
+                className="bg-input border-border"
+              />
+            </div>
+
+            {/* Hospital-Specific Fields */}
+            {activeTab === "hospital" && !isLogin && (
               <>
-                {/* Hospital Login Form */}
                 <div className="space-y-2">
                   <Label htmlFor="hospital-name">Hospital Name</Label>
                   <Input
@@ -432,31 +437,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="hospital-email">Email</Label>
-                  <Input
-                    id="hospital-email"
-                    name="email"
-                    type="email"
-                    placeholder="doctor@hospital.com"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="bg-input border-border"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className="bg-input border-border"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role (OAuth 2.0 secured)</Label>
+                  <Label htmlFor="role">Role</Label>
                   <select
                     id="role"
                     name="role"
@@ -469,72 +450,38 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                     <option value="staff">Hospital Staff</option>
                   </select>
                 </div>
-                <Button
-                  onClick={handleHospitalLogin}
-                  className="w-full btn-gradient btn-rounded text-white font-semibold"
-                >
-                  Access Portal
-                </Button>
-              </>
-            ) : (
-              <>
-                {/* Patient Registration Form */}
-                <div className="space-y-2">
-                  <Label htmlFor="full-name">Full Name</Label>
-                  <Input
-                    id="full-name"
-                    name="fullName"
-                    placeholder="John Doe"
-                    value={formData.fullName}
-                    onChange={handleInputChange}
-                    className="bg-input border-border"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="patient-email">Email</Label>
-                  <Input
-                    id="patient-email"
-                    name="email"
-                    type="email"
-                    placeholder="patient@email.com"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="bg-input border-border"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="patient-password">Password</Label>
-                  <Input
-                    id="patient-password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className="bg-input border-border"
-                  />
-                </div>
-                <Button
-                  onClick={handlePatientRegister}
-                  className="w-full btn-gradient-secondary btn-rounded text-white font-semibold"
-                >
-                  Generate Health ID
-                </Button>
               </>
             )}
+
+            {/* Patient-Specific Fields */}
+            {activeTab === "patient" && !isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="full-name">Full Name</Label>
+                <Input
+                  id="full-name"
+                  name="fullName"
+                  placeholder="John Doe"
+                  value={formData.fullName}
+                  onChange={handleInputChange}
+                  className="bg-input border-border"
+                />
+              </div>
+            )}
+
+            <Button
+              onClick={activeTab === "hospital" ? handleHospitalLogin : handlePatientRegister}
+              disabled={loading}
+              className="w-full btn-gradient btn-rounded text-white font-semibold"
+            >
+              {loading ? "Processing..." : isLogin ? "Login" : "Register"}
+            </Button>
           </CardContent>
         </Card>
-
-        {/* Footer Info */}
-        <div className="text-center text-xs text-muted-foreground space-y-1">
-          <p>🔒 HTTPS Encrypted | 📊 FHIR Compliant | 🔐 Role-Based Access Control</p>
-          <p>Cloud-based • Version Controlled • Secure Backup</p>
-        </div>
 
         {/* Back to Landing */}
         <button
           onClick={() => setShowAuth(false)}
-          className="w-full text-center text-sm text-slate-400 hover:text-slate-300 transition-colors"
+          className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           Back to Home
         </button>

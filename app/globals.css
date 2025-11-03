@@ -3,25 +3,26 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Updated color variables for Amoled Black dark mode and Egg White light mode */
 :root {
-  --background: #0f1419;
-  --foreground: #e8eaed;
-  --card: #1a1f28;
-  --card-foreground: #e8eaed;
-  --popover: #1a1f28;
-  --popover-foreground: #e8eaed;
+  --background: #fffbf0;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
   --primary: #3b82f6;
-  --primary-foreground: #0f1419;
-  --secondary: #2d3748;
-  --secondary-foreground: #e8eaed;
-  --muted: #4a5568;
-  --muted-foreground: #a0aec0;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #1a1a1a;
+  --muted: #d1d5db;
+  --muted-foreground: #6b7280;
   --accent: #10b981;
-  --accent-foreground: #0f1419;
+  --accent-foreground: #ffffff;
   --destructive: #ef4444;
-  --destructive-foreground: #fca5a5;
-  --border: #2d3748;
-  --input: #1a1f28;
+  --destructive-foreground: #ffffff;
+  --border: #e5e7eb;
+  --input: #ffffff;
   --ring: #3b82f6;
   --chart-1: #3b82f6;
   --chart-2: #10b981;
@@ -29,47 +30,47 @@
   --chart-4: #f59e0b;
   --chart-5: #ec4899;
   --radius: 0.75rem;
-  --sidebar: #111827;
-  --sidebar-foreground: #e8eaed;
+  --sidebar: #f9fafb;
+  --sidebar-foreground: #1a1a1a;
   --sidebar-primary: #3b82f6;
-  --sidebar-primary-foreground: #0f1419;
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #10b981;
-  --sidebar-accent-foreground: #0f1419;
-  --sidebar-border: #2d3748;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #e5e7eb;
   --sidebar-ring: #3b82f6;
 }
 
 .dark {
-  --background: #0f1419;
-  --foreground: #e8eaed;
-  --card: #1a1f28;
-  --card-foreground: #e8eaed;
-  --popover: #1a1f28;
-  --popover-foreground: #e8eaed;
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #111111;
+  --card-foreground: #ffffff;
+  --popover: #111111;
+  --popover-foreground: #ffffff;
   --primary: #3b82f6;
-  --primary-foreground: #0f1419;
-  --secondary: #2d3748;
-  --secondary-foreground: #e8eaed;
-  --muted: #4a5568;
+  --primary-foreground: #000000;
+  --secondary: #1f1f1f;
+  --secondary-foreground: #ffffff;
+  --muted: #404040;
   --muted-foreground: #a0aec0;
   --accent: #10b981;
-  --accent-foreground: #0f1419;
+  --accent-foreground: #000000;
   --destructive: #ef4444;
   --destructive-foreground: #fca5a5;
   --border: #2d3748;
-  --input: #1a1f28;
+  --input: #1a1a1a;
   --ring: #3b82f6;
   --chart-1: #3b82f6;
   --chart-2: #10b981;
   --chart-3: #8b5cf6;
   --chart-4: #f59e0b;
   --chart-5: #ec4899;
-  --sidebar: #111827;
-  --sidebar-foreground: #e8eaed;
+  --sidebar: #000000;
+  --sidebar-foreground: #ffffff;
   --sidebar-primary: #3b82f6;
-  --sidebar-primary-foreground: #0f1419;
+  --sidebar-primary-foreground: #000000;
   --sidebar-accent: #10b981;
-  --sidebar-accent-foreground: #0f1419;
+  --sidebar-accent-foreground: #000000;
   --sidebar-border: #2d3748;
   --sidebar-ring: #3b82f6;
 }
@@ -124,13 +125,13 @@
   }
 }
 
-/* Custom gradient button styles */
+/* White to Red gradient button styles */
 .btn-gradient {
-  @apply bg-gradient-to-r from-blue-500 via-blue-600 to-green-500 hover:from-blue-600 hover:via-blue-700 hover:to-green-600 transition-all;
+  @apply bg-gradient-to-r from-white via-red-400 to-red-600 hover:from-red-50 hover:via-red-500 hover:to-red-700 transition-all text-red-700 hover:text-red-800;
 }
 
 .btn-gradient-secondary {
-  @apply bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transition-all;
+  @apply bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all text-white;
 }
 
 /* Rounded button styles */
